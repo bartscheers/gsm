@@ -8,7 +8,8 @@ For the LOFAR BBS calibration pipeline these tools can be used to create a sky m
 catalog file in ``makesourcedb`` format.
 The ``rungsm.py`` script, formerly known as ``gsm.py``, 
 extracts sources in a cone of a given radius around a given position 
-on the sky from the Global Sky Model.
+on the sky from the Global Sky Model database.
+For more detail you are referred to the `LOFAR Imaging Cookbook`_.
 
 If want to run the GSM database locally, you can get the 
 catalog data from https://homepages.cwi.nl/~bscheers/gsm/
@@ -24,4 +25,5 @@ in ``makesourcedb`` format and can be run as:
 
 ``python rungsm.py outfile RA DEC radius [vlssFluxCutoff [assocTheta]]``
 
+.. _LOFAR Imaging Cookbook: https://support.astron.nl/LOFARImagingCookbook/
 
