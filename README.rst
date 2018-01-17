@@ -14,6 +14,9 @@ For more detail you are referred to the `LOFAR Imaging Cookbook`_.
 If want to run the GSM database locally, you can get the 
 catalog ``csv`` data from `here`_.
 
+Be sure to install dependent packages ``six``, ``numpy`` and
+``pymonetdb``.
+
 Run gsm
 -------
 
