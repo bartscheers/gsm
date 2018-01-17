@@ -12,7 +12,7 @@ on the sky from the Global Sky Model database.
 For more detail you are referred to the `LOFAR Imaging Cookbook`_.
 
 If want to run the GSM database locally, you can get the 
-catalog data from https://homepages.cwi.nl/~bscheers/gsm/
+catalog ``csv`` data from `here`_.
 
 Run gsm
 -------
@@ -26,4 +26,5 @@ in ``makesourcedb`` format and can be run as:
 ``python rungsm.py outfile RA DEC radius [vlssFluxCutoff [assocTheta]]``
 
 .. _LOFAR Imaging Cookbook: https://support.astron.nl/LOFARImagingCookbook/
+.. _here: https://homepages.cwi.nl/~bscheers/gsm/
 
