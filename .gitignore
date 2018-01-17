@@ -1,0 +1,4 @@
+*.pyc
+*.csv
+
+gsm/config/config.cfg
