@@ -11,10 +11,10 @@ extracts sources in a cone of a given radius around a given position
 on the sky from the Global Sky Model database.
 For more detail you are referred to the `LOFAR Imaging Cookbook`_.
 
-If want to run the GSM database locally, you can get the 
+If you want to run the GSM database locally, you can get the 
 catalog ``csv`` data from `here`_.
 
-Be sure to install dependent packages ``six``, ``numpy`` and
+Be sure to install dependent packages, e.g., ``six``, ``numpy`` and
 ``pymonetdb``.
 
 Run gsm

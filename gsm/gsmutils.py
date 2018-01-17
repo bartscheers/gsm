@@ -97,7 +97,6 @@ def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,
                      ,'deRuiter_reduced': deRuiter_reduced
                      ,'vlss_flux_cutoff': vlss_flux_cutoff}
             query = qu % (params)
-            print "Query:\n%s" % (query)
             cursor.execute(query)
         elif q == "q_across_ra0":
             qf = queryfile('db/sql/cm_across.sql')
