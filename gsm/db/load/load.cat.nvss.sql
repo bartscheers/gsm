@@ -59,7 +59,6 @@ INTO aux_catalogedsources
 FROM
 /* Uncomment here the absolute server path to the csv catalogue file  
  '/something/like/catfiles/vlss/VLSS-all_strip.csv' */
-'/ssd/bscheers/svnrepo/GSM/db/load/nvss.csv'
 USING DELIMITERS ';', '\n'
 NULL AS ''
 ;

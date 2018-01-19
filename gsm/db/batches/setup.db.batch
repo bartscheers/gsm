@@ -22,7 +22,7 @@
 # %> ./setup.db.batch localhost test1 test1 test1 50000                       #
 ###############################################################################
 
-MONETDBSIPHOME=/ssd/bscheers/svnrepo/GSM/db
+MONETDBSIPHOME=.
 
 if [ -z "$*" ]
 then
