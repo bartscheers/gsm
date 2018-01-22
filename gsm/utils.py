@@ -9,7 +9,7 @@ import sys, string, logging
 import numpy as np
 
 from pymonetdb.exceptions import Error as DBError
-from gsm.gsm_exceptions import GSMException
+from gsm.exceptions import GSMException
 from gsm.db.qf import queryfile
 
 def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,

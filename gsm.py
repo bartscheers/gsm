@@ -5,7 +5,7 @@ from pymonetdb.sql.connections import Connection as connect
 from pymonetdb.exceptions import Error as DBError
 
 #import lofar.gsm.gsmutils as gsm
-from gsm import gsmutils as gsm
+from gsm import utils as gu
 from gsm.config import config as cfg
 
 # Interpret the arguments and do the selection.
@@ -62,7 +62,7 @@ def main (name, argv):
                       ,password = cfg.pword()
                       ,port = cfg.port()
                       )
-        gsm.expected_fluxes_in_fov (conn, ra, dec, radius, theta, outfile,
+        gu.expected_fluxes_in_fov (conn, ra, dec, radius, theta, outfile,
                                     patchname=patch,
                                     storespectraplots=False,
                                     deruiter_radius=3.717,

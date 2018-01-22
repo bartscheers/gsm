@@ -2,7 +2,7 @@ import ConfigParser, logging, glob
 import numpy as np
 
 config = ConfigParser.ConfigParser()
-config.read('config/config.cfg')
+config.read('gsm/config/config.cfg')
 
 def host():
     return config.get("database", "host")
