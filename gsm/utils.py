@@ -99,7 +99,7 @@ def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,
             query = qu % (params)
             cursor.execute(query)
         elif q == "q_across_ra0":
-            qf = queryfile('db/sql/cm_across.sql')
+            qf = queryfile('db/sql/cm_wrap.sql')
             with open(qf, 'r') as f:
                 qu = f.read()
             params = {'decl_central': decl_central
