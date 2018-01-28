@@ -22,7 +22,8 @@
 # %> ./setup.db.batch localhost test1 test1 test1 50000                       #
 ###############################################################################
 
-MONETDBSIPHOME=.
+# Set absolute path to gasm/gsm/db
+MONETDBSIPHOME=/path/to/gsm/gsm/db
 
 if [ -z "$*" ]
 then
@@ -220,6 +221,9 @@ mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.
 echo -e "\t\tCreating MonetDB ${dbname} function getNeighborsinCat"
 mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.getNeighborsInCat.sql || exit 1
 
+echo -e "\t\tCreating MonetDB ${dbname} function getNeighborsinCats"
+mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.getNeighborsInCats.sql || exit 1
+
 echo -e "\t\tCreating MonetDB ${dbname} function getNearestNeighborInCat"
 mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.getNearestNeighborInCat.sql || exit 1
 
@@ -271,8 +275,8 @@ mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.
 echo -e "\t\tCreating MonetDB ${dbname} function neighborsInCatsParams"
 mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.neighborsInCatsParams.sql || exit 1
 
-echo -e "\t\tCreating MonetDB ${dbname} function neighborsInCats"
-mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.neighborsInCats.sql || exit 1
+#echo -e "\t\tCreating MonetDB ${dbname} function neighborsInCats"
+#mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/functions/create.function.neighborsInCats.sql || exit 1
 
 
 echo -e "\t----------------------------------------------------"
@@ -305,10 +309,13 @@ time mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/load/load.cat.vlss.sq
 echo -e "\t\tLoad WENSS catalog"
 time mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/load/load.cat.wenss.sql || exit 1 
 
+echo -e "\t\tLoad TGSS catalog"
+time mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/load/load.cat.tgss.sql || exit 1 
+
 #echo -e "\t\tLoad EXOplanets catalog"
 #time mclient -p$port -h$host -d${dbname} < $MONETDBSIPHOME/load/load.cat.exo.sql || exit 1
 
-echo -e "\t\tLoad GRB catalog"
+#echo -e "\t\tLoad GRB catalog"
 #mclient -p$port -lsql -h$host -d${dbname} < $MONETDBSIPHOME/load/load.cat.grb.sql || exit 1
 date '+%Y-%m-%d-%H:%M:%S'
 

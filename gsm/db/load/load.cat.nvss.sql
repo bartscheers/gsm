@@ -57,8 +57,8 @@ CREATE TABLE aux_catalogedsources
 COPY 1773484 RECORDS
 INTO aux_catalogedsources
 FROM
-/* Uncomment here the absolute server path to the csv catalogue file  
- '/something/like/catfiles/vlss/VLSS-all_strip.csv' */
+/* Set absolute path to csv file */
+'/path/to/nvss.csv'
 USING DELIMITERS ';', '\n'
 NULL AS ''
 ;

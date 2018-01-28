@@ -12,11 +12,110 @@ from pymonetdb.exceptions import Error as DBError
 from gsm.exceptions import GSMException
 from gsm.db.qf import queryfile
 
-def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,
-                           assoc_theta, bbsfile,
-                           storespectraplots=False, deruiter_radius=0.,
-                           vlss_flux_cutoff=None,
-                           patchname=''):
+def expected_fluxes_in_fov(conn, basecat, ra_central, decl_central, fov_radius,
+                           assoc_theta, bbsfile, flux_cutoff, patchname,
+                           storespectraplots=False, deruiter_radius=3.717):
+    """
+    """
+
+    DERUITER_R = deruiter_radius
+    if DERUITER_R <= 0:
+        try:
+            from tkp.config import config
+            DERUITER_R = config['source_association']['deruiter_radius']
+            ##print "DERUITER_R =",DERUITER_R
+        except:
+            DERUITER_R=3.717
+    deRuiter_reduced = DERUITER_R/3600.
+
+    if ra_central - alpha(decl_central, fov_radius) < 0:
+        ra_min1 = np.float(ra_central - alpha(decl_central, fov_radius) + 360.0)
+        ra_max1 = np.float(360.0)
+        ra_min2 = np.float(0.0)
+        ra_max2 = np.float(ra_central + alpha(decl_central, fov_radius))
+        q = "q_across_ra0"
+    elif ra_central + alpha(decl_central, fov_radius) > 360:
+        ra_min1 = np.float(ra_central - alpha(decl_central, fov_radius))
+        ra_max1 = np.float(360.0)
+        ra_min2 = np.float(0.0)
+        ra_max2 = np.float(ra_central + alpha(decl_central, fov_radius) - 360)
+        q = "q_across_ra0"
+    elif ra_central - alpha(decl_central, fov_radius) < 0 and ra_central + alpha(decl_central, fov_radius) > 360:
+        raise BaseException("ra = %s > 360 degrees, not implemented yet" % str(ra_central + alpha(decl_central, fov_radius)))
+    else:
+        ra_min = np.float64(ra_central - alpha(decl_central, fov_radius))
+        ra_max = np.float64(ra_central + alpha(decl_central, fov_radius))
+        q = "q0"
+
+    #if flux_cutoff is None:
+    #    flux_cutoff = 0.
+
+    if basecat == "TGSS":
+        if q == "q0":
+            qf = queryfile('db/sql/cm_tgss.sql')
+            with open(qf, 'r') as f:
+                qu = f.read()
+            params = {'decl_central': decl_central
+                     ,'ra_central': ra_central
+                     ,'fov_radius': fov_radius
+                     ,'assoc_theta': assoc_theta
+                     ,'deRuiter_reduced': deRuiter_reduced
+                     ,'tgss_flux_cutoff': flux_cutoff}
+            query = qu % (params)
+        else:
+            qf = queryfile('db/sql/cm_wrap_tgss.sql')
+            with open(qf, 'r') as f:
+                qu = f.read()
+            params = {'decl_central': decl_central
+                     ,'ra_central': ra_central
+                     ,'ra_min1': ra_min1
+                     ,'ra_max1': ra_max1
+                     ,'ra_min2': ra_min2
+                     ,'ra_max2': ra_max2
+                     ,'fov_radius': fov_radius
+                     ,'assoc_theta': assoc_theta
+                     ,'deRuiter_reduced': deRuiter_reduced
+                     ,'tgss_flux_cutoff': flux_cutoff}
+            query = qu % (params)
+        expected_fluxes_in_fov_tgss(conn, query, bbsfile, storespectraplots, patchname='')
+    else:
+        if q == "q0":
+            qf = queryfile('db/sql/cm_vlss.sql')
+            with open(qf, 'r') as f:
+                qu = f.read()
+            params = {'izone_min': int(np.floor(decl_central - fov_radius))
+                     ,'izone_max': int(np.floor(decl_central + fov_radius))
+                     ,'idecl_min': np.float64(decl_central - fov_radius)
+                     ,'idecl_max': np.float64(decl_central + fov_radius)
+                     ,'ira_min': ra_min
+                     ,'ira_max': ra_max
+                     ,'ix': np.cos(np.radians(decl_central)) * np.cos(np.radians(ra_central))
+                     ,'iy': np.cos(np.radians(decl_central)) * np.sin(np.radians(ra_central))
+                     ,'iz': np.sin(np.radians(decl_central))
+                     ,'cosradfov_radius': np.cos(np.radians(fov_radius))
+                     ,'assoc_theta': assoc_theta
+                     ,'deRuiter_reduced': deRuiter_reduced
+                     ,'vlss_flux_cutoff': flux_cutoff}
+            query = qu % (params)
+        else:
+            qf = queryfile('db/sql/cm_wrap_vlss.sql')
+            with open(qf, 'r') as f:
+                qu = f.read()
+            params = {'decl_central': decl_central
+                     ,'ra_central': ra_central
+                     ,'ra_min1': ra_min1
+                     ,'ra_max1': ra_max1
+                     ,'ra_min2': ra_min2
+                     ,'ra_max2': ra_max2
+                     ,'fov_radius': fov_radius
+                     ,'assoc_theta': assoc_theta
+                     ,'deRuiter_reduced': deRuiter_reduced
+                     ,'vlss_flux_cutoff': flux_cutoff}
+            query = qu % (params)
+        expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots, patchname='')
+
+def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots=False, patchname=''):
+    # TODO: We should include TGSS in the search as well!
     """Search for VLSS, WENSS and NVSS sources that are in the given FoV.
     The FoV is set by its central position (ra_central, decl_central)
     out to a radius of fov_radius. The query looks for cross-matches
@@ -37,38 +136,6 @@ def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,
     the patch is given central ra/dec. Its brightness is the summed flux.
     """
 
-    DERUITER_R = deruiter_radius
-    if DERUITER_R <= 0:
-        try:
-            from tkp.config import config
-            DERUITER_R = config['source_association']['deruiter_radius']
-            ##print "DERUITER_R =",DERUITER_R
-        except:
-            DERUITER_R=3.717
-
-    #TODO: Check what happens at high decl when alpha goes to 180 degrees
-    if ra_central - alpha(decl_central, fov_radius) < 0:
-        ra_min1 = np.float(ra_central - alpha(decl_central, fov_radius) + 360.0)
-        ra_max1 = np.float(360.0)
-        ra_min2 = np.float(0.0)
-        ra_max2 = np.float(ra_central + alpha(decl_central, fov_radius))
-        q = "q_across_ra0"
-    elif ra_central + alpha(decl_central, fov_radius) > 360:
-        ra_min1 = np.float(ra_central - alpha(decl_central, fov_radius))
-        ra_max1 = np.float(360.0)
-        ra_min2 = np.float(0.0)
-        ra_max2 = np.float(ra_central + alpha(decl_central, fov_radius) - 360)
-        q = "q_across_ra0"
-    elif ra_central - alpha(decl_central, fov_radius) < 0 and ra_central + alpha(decl_central, fov_radius) > 360:
-        raise BaseException("ra = %s > 360 degrees, not implemented yet" % str(ra_central + alpha(decl_central, fov_radius)))
-    else:
-        ra_min = np.float(ra_central - alpha(decl_central, fov_radius))
-        ra_max = np.float(ra_central + alpha(decl_central, fov_radius))
-        q = "q0"
-
-    if vlss_flux_cutoff is None:
-        vlss_flux_cutoff = 0.
-
     status = True
     bbsrows = []
     totalFlux = 0.
@@ -76,198 +143,351 @@ def expected_fluxes_in_fov(conn, ra_central, decl_central, fov_radius,
     # This is dimensionless search radius that takes into account
     # the ra and decl difference between two sources weighted by
     # their positional errors.
-    deRuiter_reduced = DERUITER_R/3600.
+    ## deRuiter_reduced = DERUITER_R/3600.
     try:
         cursor = conn.cursor()
-        if q == "q0":
-            qf = queryfile('db/sql/cm.sql')
-            with open(qf, 'r') as f:
-                qu = f.read()
-            params = {'izone_min': int(np.floor(decl_central - fov_radius))
-                     ,'izone_max': int(np.floor(decl_central + fov_radius))
-                     ,'idecl_min': np.float64(decl_central - fov_radius)
-                     ,'idecl_max': np.float64(decl_central + fov_radius)
-                     ,'ira_min': np.float64(ra_central - alpha(decl_central, fov_radius))
-                     ,'ira_max': np.float64(ra_central + alpha(decl_central, fov_radius))
-                     ,'ix': np.cos(np.radians(decl_central)) * np.cos(np.radians(ra_central))
-                     ,'iy': np.cos(np.radians(decl_central)) * np.sin(np.radians(ra_central))
-                     ,'iz': np.sin(np.radians(decl_central))
-                     ,'cosradfov_radius': np.cos(np.radians(fov_radius))
-                     ,'assoc_theta': assoc_theta
-                     ,'deRuiter_reduced': deRuiter_reduced
-                     ,'vlss_flux_cutoff': vlss_flux_cutoff}
-            query = qu % (params)
-            cursor.execute(query)
-        elif q == "q_across_ra0":
-            qf = queryfile('db/sql/cm_wrap.sql')
-            with open(qf, 'r') as f:
-                qu = f.read()
-            params = {'decl_central': decl_central
-                     ,'ra_central': ra_central
-                     ,'ra_min1': ra_min1
-                     ,'ra_max1': ra_max1
-                     ,'ra_min2': ra_min2
-                     ,'ra_max2': ra_max2
-                     ,'fov_radius': fov_radius
-                     ,'assoc_theta': assoc_theta
-                     ,'deRuiter_reduced': deRuiter_reduced
-                     ,'vlss_flux_cutoff': vlss_flux_cutoff}
-            query = qu % (params)
-            cursor.execute(query)
-        else:
-            raise BaseException("ra = %s > 360 degrees, not implemented yet" \
-                % str(ra_central + alpha(decl_central, fov_radius)))
+        cursor.execute(query)
         results = zip(*cursor.fetchall())
         cursor.close()
         if len(results) == 0:
             raise GSMException("No sources found, so Sky Model File %s is not created" % (bbsfile,))
-
-        vlss_catsrcid = results[0]
-        vlss_name = results[1]
-        wenssm_catsrcid = results[2]
-        wenssp_catsrcid = results[3]
-        nvss_catsrcid = results[4]
-        v_flux = results[5]
-        wm_flux = results[6]
-        wp_flux = results[7]
-        n_flux = results[8]
-        v_flux_err = results[9]
-        wm_flux_err = results[10]
-        wp_flux_err = results[11]
-        n_flux_err = results[12]
-        wm_assoc_distance_arcsec = results[13]
-        wm_assoc_r = results[14]
-        wp_assoc_distance_arcsec = results[15]
-        wp_assoc_r = results[16]
-        n_assoc_distance_arcsec = results[17]
-        n_assoc_r = results[18]
-        pa = results[19]
-        major = results[20]
-        minor = results[21]
-        ra = results[22]
-        decl = results[23]
-
-        spectrumfiles = []
-        # Check for duplicate vlss_names. This may arise when a VLSS source
-        # is associated with one or more (genuine) counterparts.
-        # Eg., if two NVSS sources are seen as counterparts
-        # VLSS - WENSS - NVSS_1
-        # VLSS - WENSS - NVSS_2
-        # two rows will be added to the sky model, where the VLSS name
-        # is postfixed with _0 and _1, resp.
-        import collections
-        items = collections.defaultdict(list)
-        src_name = list(vlss_name)
-        for i, item in enumerate(src_name):
-            items[item].append(i)
-        for item, locs in items.iteritems():
-            if len(locs) > 1:
-                #print "duplicates of", item, "at", locs
-                for j in range(len(locs)):
-                    src_name[locs[j]] = src_name[locs[j]] + "_" + str(j)
-        if len(results) != 0:
-            for i in range(len(vlss_catsrcid)):
-                ##print "\ni = ", i
-                bbsrow = ""
-                # Here we check the cases for the degree of the polynomial spectral index fit
-                #print i, vlss_name[i],vlss_catsrcid[i], wenssm_catsrcid[i], wenssp_catsrcid[i], nvss_catsrcid[i]
-                # Write the vlss name of the source (either postfixed or not)
-                bbsrow += src_name[i] + ", "
-                # According to Jess, only sources that have values for all
-                # three are considered as GAUSSIAN
-                if pa[i] is not None and major[i] is not None and minor[i] is not None:
-                    #print "Gaussian:", pa[i], major[i], minor[i]
-                    bbsrow += "GAUSSIAN, "
-                else:
-                    #print "POINT"
-                    bbsrow += "POINT, "
-                #print "ra = ", ra[i], "; decl = ", decl[i]
-                #print "BBS ra = ", ra2bbshms(ra[i]), "; BBS decl = ", decl2bbsdms(decl[i])
-                bbsrow += ra2bbshms(ra[i]) + ", " + decl2bbsdms(decl[i]) + ", "
-                # Stokes I id default, so field is empty
-                #bbsrow += ", "
-                lognu = []
-                logflux = []
-                lognu.append(np.log10(74.0/60.0))
-                logflux.append(np.log10(v_flux[i]))
-                if wenssm_catsrcid[i] is not None:
-                    lognu.append(np.log10(325.0/60.0))
-                    logflux.append(np.log10(wm_flux[i]))
-                if wenssp_catsrcid[i] is not None:
-                    lognu.append(np.log10(352.0/60.0))
-                    logflux.append(np.log10(wp_flux[i]))
-                if nvss_catsrcid[i] is not None:
-                    lognu.append(np.log10(1400.0/60.0))
-                    logflux.append(np.log10(n_flux[i]))
-                f = ""
-                for j in range(len(logflux)):
-                    f += str(10**logflux[j]) + "; "
-                ##print f
-                #print "len(lognu) = ",len(lognu), "nvss_catsrcid[",i,"] =", nvss_catsrcid[i]
-                # Here we write the expected flux values at 60 MHz, and the fitted spectral index and
-                # and curvature term
-                if len(lognu) == 1:
-                    #print "Exp. flux:", 10**(np.log10(v_flux[i]) + 0.7 * np.log10(74.0/60.0))
-                    #print "Default -0.7"
-                    fluxrow = round(10**(np.log10(v_flux[i]) + 0.7 * np.log10(74.0/60.0)), 2)
-                    totalFlux += fluxrow
-                    bbsrow += str(fluxrow) + ", , , , , "
-                    bbsrow += "[-0.7]"
-                elif len(lognu) == 2 or (len(lognu) == 3 and nvss_catsrcid[i] is None):
-                    #print "Do a 1-degree polynomial fit"
-                    # p has form : p(x) = p[0] + p[1]*x
-                    p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 1))
-                    #print p
-                    if storespectraplots:
-                        spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "spectrum_%s.eps" % vlss_name[i])
-                        spectrumfiles.append(spectrumfile)
-                    # Default reference frequency is reported, so we leave it empty here;
-                    # Catalogues just report on Stokes I, so others are empty.
-                    fluxrow = round(10**p[0], 4)
-                    totalFlux += fluxrow
-                    bbsrow += str(fluxrow) + ", , , , , "
-                    bbsrow += "[" + str(round(p[1], 4)) + "]"
-                elif (len(lognu) == 3 and nvss_catsrcid[i] is not None) or len(lognu) == 4:
-                    #print "Do a 2-degree polynomial fit"
-                    # p has form : p(x) = p[0] + p[1]*x + p[2]*x**2
-                    p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 2))
-                    #print p
-                    if storespectraplots:
-                        spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "spectrum_%s.eps" % vlss_name[i])
-                        spectrumfiles.append(spectrumfile)
-                    # Default reference frequency is reported, so we leave it empty here
-                    bbsrow += str(round(10**p[0], 4)) + ", , , , , "
-                    bbsrow += "[" + str(round(p[1],4)) + ", " + str(round(p[2],4)) + "]"
-                if pa[i] is not None and major[i] is not None and minor[i] is not None:
-                    # Gaussian source:
-                    bbsrow += ", " + str(round(major[i], 2)) + \
-                              ", " + str(round(minor[i], 2)) + \
-                              ", " + str(round(pa[i], 2))
-                #print bbsrow
-                bbsrows.append (bbsrow)
-
-            if storespectraplots:
-                print "Spectra available in:", spectrumfiles
-
-        # Write the format line.
-        # Optionally it contains a column containing the patch name.
-        skymodel = open(bbsfile, 'w')
-        header = "FORMAT = Name, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='60e6', SpectralIndex='[0.0]', MajorAxis, MinorAxis, Orientation"
-        # Add fixed patch name to the header and add a line defining the patch.
-        if len(patchname) > 0:
-            header += ", patch=fixed'" + patchname + "'\n\n"
-            header += "# the next line defines the patch\n"
-            header += ',, ' + ra2bbshms(ra_central) + ', ' + decl2bbsdms(decl_central) + ', ' + str(totalFlux)
-        header += "\n\n# the next lines define the sources\n"
-        skymodel.write(header)
-        for bbsrow in bbsrows:
-            skymodel.write(bbsrow + '\n')
-        skymodel.close()
-        print "Sky model stored in source table:", bbsfile
-
     except DBError, e:
         logging.warn("Failed on query nr %s; for reason %s" % (query, e))
         raise
+
+    vlss_catsrcid = results[0]
+    vlss_name = results[1]
+    wenssm_catsrcid = results[2]
+    wenssp_catsrcid = results[3]
+    nvss_catsrcid = results[4]
+    v_flux = results[5]
+    wm_flux = results[6]
+    wp_flux = results[7]
+    n_flux = results[8]
+    v_flux_err = results[9]
+    wm_flux_err = results[10]
+    wp_flux_err = results[11]
+    n_flux_err = results[12]
+    wm_assoc_distance_arcsec = results[13]
+    wm_assoc_r = results[14]
+    wp_assoc_distance_arcsec = results[15]
+    wp_assoc_r = results[16]
+    n_assoc_distance_arcsec = results[17]
+    n_assoc_r = results[18]
+    pa = results[19]
+    major = results[20]
+    minor = results[21]
+    ra = results[22]
+    decl = results[23]
+
+    spectrumfiles = []
+    # Check for duplicate vlss_names. This may arise when a VLSS source
+    # is associated with one or more (genuine) counterparts.
+    # Eg., if two NVSS sources are seen as counterparts
+    # VLSS - WENSS - NVSS_1
+    # VLSS - WENSS - NVSS_2
+    # two rows will be added to the sky model, where the VLSS name
+    # is postfixed with _0 and _1, resp.
+    import collections
+    items = collections.defaultdict(list)
+    src_name = list(vlss_name)
+    for i, item in enumerate(src_name):
+        items[item].append(i)
+    for item, locs in items.iteritems():
+        if len(locs) > 1:
+            #print "duplicates of", item, "at", locs
+            for j in range(len(locs)):
+                src_name[locs[j]] = src_name[locs[j]] + "_" + str(j)
+    if len(results) != 0:
+        for i in range(len(vlss_catsrcid)):
+            ##print "\ni = ", i
+            bbsrow = ""
+            # Here we check the cases for the degree of the polynomial spectral index fit
+            #print i, vlss_name[i],vlss_catsrcid[i], wenssm_catsrcid[i], wenssp_catsrcid[i], nvss_catsrcid[i]
+            # Write the vlss name of the source (either postfixed or not)
+            bbsrow += src_name[i] + ", "
+            # According to Jess, only sources that have values for all
+            # three are considered as GAUSSIAN
+            if pa[i] is not None and major[i] is not None and minor[i] is not None:
+                #print "Gaussian:", pa[i], major[i], minor[i]
+                bbsrow += "GAUSSIAN, "
+            else:
+                #print "POINT"
+                bbsrow += "POINT, "
+            #print "ra = ", ra[i], "; decl = ", decl[i]
+            #print "BBS ra = ", ra2bbshms(ra[i]), "; BBS decl = ", decl2bbsdms(decl[i])
+            bbsrow += ra2bbshms(ra[i]) + ", " + decl2bbsdms(decl[i]) + ", "
+            # Stokes I id default, so field is empty
+            #bbsrow += ", "
+            lognu = []
+            logflux = []
+            lognu.append(np.log10(74.0/60.0))
+            logflux.append(np.log10(v_flux[i]))
+            if wenssm_catsrcid[i] is not None:
+                lognu.append(np.log10(325.0/60.0))
+                logflux.append(np.log10(wm_flux[i]))
+            if wenssp_catsrcid[i] is not None:
+                lognu.append(np.log10(352.0/60.0))
+                logflux.append(np.log10(wp_flux[i]))
+            if nvss_catsrcid[i] is not None:
+                lognu.append(np.log10(1400.0/60.0))
+                logflux.append(np.log10(n_flux[i]))
+            f = ""
+            for j in range(len(logflux)):
+                f += str(10**logflux[j]) + "; "
+            # TODO: We should include TGSS in the search as well!
+            #print "%s:\tvlss = %s; wenssm = %s; wenssp = %s; nvss = %s" % (i, vlss_catsrcid[i], \
+            #    wenssm_catsrcid[i], wenssp_catsrcid[i], nvss_catsrcid[i])
+            #print "\tlognu = %s" % (lognu)
+            #print "\tlogflux = %s" % (logflux)
+            # Here we write the expected flux values at 60 MHz, and the fitted spectral index and
+            # and curvature term
+            if len(lognu) == 1:
+                #print "Exp. flux:", 10**(np.log10(v_flux[i]) + 0.7 * np.log10(74.0/60.0))
+                #print "Default -0.7"
+                fluxrow = round(10**(np.log10(v_flux[i]) + 0.7 * np.log10(74.0/60.0)), 2)
+                totalFlux += fluxrow
+                bbsrow += str(fluxrow) + ", , , , , "
+                bbsrow += "[-0.7]"
+            elif len(lognu) == 2 or (len(lognu) == 3 and nvss_catsrcid[i] is None):
+                #print "Do a 1-degree polynomial fit"
+                # p has form : p(x) = p[0] + p[1]*x
+                p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 1))
+                #print p
+                if storespectraplots:
+                    spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "vlss_%s.eps" % vlss_name[i])
+                    spectrumfiles.append(spectrumfile)
+                # Default reference frequency is reported, so we leave it empty here;
+                # Catalogues just report on Stokes I, so others are empty.
+                fluxrow = round(10**p[0], 4)
+                totalFlux += fluxrow
+                bbsrow += str(fluxrow) + ", , , , , "
+                bbsrow += "[" + str(round(p[1], 4)) + "]"
+            elif (len(lognu) == 3 and nvss_catsrcid[i] is not None) or len(lognu) == 4:
+                #print "Do a 2-degree polynomial fit"
+                # p has form : p(x) = p[0] + p[1]*x + p[2]*x**2
+                p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 2))
+                #print p
+                if storespectraplots:
+                    spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "vlss_%s.eps" % vlss_name[i])
+                    spectrumfiles.append(spectrumfile)
+                # Default reference frequency is reported, so we leave it empty here
+                bbsrow += str(round(10**p[0], 4)) + ", , , , , "
+                bbsrow += "[" + str(round(p[1],4)) + ", " + str(round(p[2],4)) + "]"
+            if pa[i] is not None and major[i] is not None and minor[i] is not None:
+                # Gaussian source:
+                bbsrow += ", " + str(round(major[i], 2)) + \
+                          ", " + str(round(minor[i], 2)) + \
+                          ", " + str(round(pa[i], 2))
+            #print bbsrow
+            bbsrows.append (bbsrow)
+
+        if storespectraplots:
+            print "Spectra available in:", spectrumfiles
+
+    # Write the format line.
+    # Optionally it contains a column containing the patch name.
+    skymodel = open(bbsfile, 'w')
+    header = "FORMAT = Name, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='60e6', SpectralIndex='[0.0]', MajorAxis, MinorAxis, Orientation"
+    # Add fixed patch name to the header and add a line defining the patch.
+    if len(patchname) > 0:
+        header += ", patch=fixed'" + patchname + "'\n\n"
+        header += "# the next line defines the patch\n"
+        header += ',, ' + ra2bbshms(ra_central) + ', ' + decl2bbsdms(decl_central) + ', ' + str(totalFlux)
+    header += "\n\n# the next lines define the sources\n"
+    skymodel.write(header)
+    for bbsrow in bbsrows:
+        skymodel.write(bbsrow + '\n')
+    skymodel.close()
+    print "Sky model stored in source table: %s" % (bbsfile)
+
+def expected_fluxes_in_fov_tgss(conn, query, bbsfile, storespectraplots=False, patchname=''):
+    """Identical to _vlss. Base is TGSS
+    """
+
+    status = True
+    bbsrows = []
+    totalFlux = 0.
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        results = zip(*cursor.fetchall())
+        cursor.close()
+        if len(results) == 0:
+            raise GSMException("No sources found, so Sky Model File %s is not created" % (bbsfile,))
+    except DBError, e:
+        logging.warn("Failed on query nr %s; for reason %s" % (query, e))
+        raise
+
+    tgss_catsrcid = results[0]
+    tgss_name = results[1]
+    wenssm_catsrcid = results[2]
+    wenssp_catsrcid = results[3]
+    vlss_catsrcid = results[4]
+    nvss_catsrcid = results[5]
+    t_flux = results[6]
+    wm_flux = results[7]
+    wp_flux = results[8]
+    v_flux = results[9]
+    n_flux = results[10]
+    t_flux_err = results[11]
+    wm_flux_err = results[12]
+    wp_flux_err = results[13]
+    v_flux_err = results[14]
+    n_flux_err = results[15]
+    wm_assoc_distance_arcsec = results[16]
+    wm_assoc_r = results[17]
+    wp_assoc_distance_arcsec = results[18]
+    wp_assoc_r = results[19]
+    v_assoc_distance_arcsec = results[20]
+    v_assoc_r = results[21]
+    n_assoc_distance_arcsec = results[22]
+    n_assoc_r = results[23]
+    pa = results[24]
+    major = results[25]
+    minor = results[26]
+    ra = results[27]
+    decl = results[28]
+    spectrumfiles = []
+    # Check for duplicate tgss_names. This may arise when a VLSS source
+    # is associated with one or more (genuine) counterparts.
+    # Eg., if two NVSS sources are seen as counterparts
+    # VLSS - WENSS - NVSS_1
+    # VLSS - WENSS - NVSS_2
+    # two rows will be added to the sky model, where the VLSS name
+    # is postfixed with _0 and _1, resp.
+    import collections
+    items = collections.defaultdict(list)
+    src_name = list(tgss_name)
+    #storespectraplots=False
+    for i, item in enumerate(src_name):
+        items[item].append(i)
+    for item, locs in items.iteritems():
+        if len(locs) > 1:
+            #print "duplicates of", item, "at", locs
+            for j in range(len(locs)):
+                src_name[locs[j]] = src_name[locs[j]] + "_" + str(j)
+    if len(results) != 0:
+        for i in range(len(tgss_catsrcid)):
+            ##print "\ni = ", i
+            bbsrow = ""
+            # Here we check the cases for the degree of the polynomial spectral index fit
+
+            # Write the vlss name of the source (either postfixed or not)
+            bbsrow += src_name[i] + ", "
+            # According to Jess, only sources that have values for all
+            # three are considered as GAUSSIAN
+            if pa[i] is not None and major[i] is not None and minor[i] is not None:
+                #print "Gaussian:", pa[i], major[i], minor[i]
+                bbsrow += "GAUSSIAN, "
+            else:
+                #print "POINT"
+                bbsrow += "POINT, "
+            #print "ra = ", ra[i], "; decl = ", decl[i]
+            #print "BBS ra = ", ra2bbshms(ra[i]), "; BBS decl = ", decl2bbsdms(decl[i])
+            bbsrow += ra2bbshms(ra[i]) + ", " + decl2bbsdms(decl[i]) + ", "
+            # Stokes I id default, so filed is empty
+            #bbsrow += ", "
+            lognu = []
+            logflux = []
+            if vlss_catsrcid[i] is not None:
+                lognu.append(np.log10(73.8/60.0))
+                logflux.append(np.log10(v_flux[i]))
+            # tgss is never None, because it is the basecat.
+            # It is kept in the sequence of increasing frequency ratio
+            if tgss_catsrcid[i] is not None:
+                lognu.append(np.log10(150.0/60.0))
+                logflux.append(np.log10(t_flux[i]))
+            if wenssm_catsrcid[i] is not None:
+                lognu.append(np.log10(325.0/60.0))
+                logflux.append(np.log10(wm_flux[i]))
+            if wenssp_catsrcid[i] is not None:
+                lognu.append(np.log10(352.0/60.0))
+                logflux.append(np.log10(wp_flux[i]))
+            if nvss_catsrcid[i] is not None:
+                lognu.append(np.log10(1400.0/60.0))
+                logflux.append(np.log10(n_flux[i]))
+            f = ""
+            for j in range(len(logflux)):
+                f += str(10**logflux[j]) + "; "
+            #print "%s:\tvlss = %s; tgss = %s; wenssm = %s; wenssp = %s; nvss = %s" % (i, vlss_catsrcid[i], \
+            #    tgss_catsrcid[i], wenssm_catsrcid[i], wenssp_catsrcid[i], nvss_catsrcid[i])
+            #print "\tlognu = %s" % (lognu)
+            #print "\tlogflux = %s" % (logflux)
+            # Here we write the expected flux values at 60 MHz and
+            # the fitted spectral index, curvature and higher-order curvature terms
+            #if len(lognu)>=4: pass #print "longlognu"
+
+            if len(lognu) == 1:
+                # p = p_0
+                fluxrow = round(10**(np.log10(t_flux[i]) + 0.73 * np.log10(150.0/60.0)), 2)
+                totalFlux += fluxrow
+                bbsrow += str(fluxrow) + ", , , , , "
+                bbsrow += "[-0.73]"
+            elif len(lognu) == 2 or (len(lognu) == 3
+                                     and wenssm_catsrcid[i] is not None
+                                     and wenssp_catsrcid[i] is not None):
+                # p = p_0 + p_1 x
+                # p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 1))
+                p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 1))
+                if storespectraplots:
+                    spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "tgss_%s.eps" % tgss_name[i])
+                    spectrumfiles.append(spectrumfile)
+                # Default reference frequency is reported, so we leave it empty here;
+                # Catalogues just report on Stokes I, so others are empty.
+                fluxrow = round(10**p[0], 4)
+                totalFlux += fluxrow
+                bbsrow += str(fluxrow) + ", , , , , "
+                bbsrow += "[" + str(round(p[1], 4)) + "]"
+            elif len(lognu) == 3 or (len(lognu) == 4
+                                     and wenssm_catsrcid[i] is not None
+                                     and wenssp_catsrcid[i] is not None):
+                # p = p_0 + p_1 x + p_2 x^2
+                # p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 2))
+                p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 2))
+                #print p
+                if storespectraplots:
+                    spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "tgss_%s.eps" % tgss_name[i])
+                    spectrumfiles.append(spectrumfile)
+                # Default reference frequency is reported, so we leave it empty here
+                bbsrow += str(round(10**p[0], 4)) + ", , , , , "
+                bbsrow += "[" + str(round(p[1],4)) + ", " + str(round(p[2],4)) + "]"
+            elif len(lognu) == 4 or len(lognu) == 5:
+                # p = p_0 + p_1 x + p_2 x^2 + p_3 x^3
+                # p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 3))
+                p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 3))
+                #print p
+                if storespectraplots:
+                    spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "tgss_%s.eps" % (tgss_name[i]))
+                    spectrumfiles.append(spectrumfile)
+                # Default reference frequency is reported, so we leave it empty here
+                bbsrow += str(round(10**p[0], 4)) + ", , , , , "
+                bbsrow += "[" + str(round(p[1],4)) + ", " + str(round(p[2],4)) + ", " + str(round(p[3],4)) + "]"
+            if pa[i] is not None and major[i] is not None and minor[i] is not None:
+                # Gaussian source:
+                bbsrow += ", " + str(round(major[i], 2)) + ", " + str(round(minor[i], 2)) + ", " + str(round(pa[i], 2))
+            #print bbsrow
+            bbsrows.append (bbsrow)
+
+        if storespectraplots:
+            print "Spectra available in: %s" % (spectrumfiles)
+
+    # Write the format line.
+    # Optionally it contains a column containing the patch name.
+    skymodel = open(bbsfile, 'w')
+    header = "FORMAT = Name, Type, Ra, Dec, I, Q, U, V, ReferenceFrequency='60e6', SpectralIndex='[0.0]', MajorAxis, MinorAxis, Orientation"
+    # Add fixed patch name to the header and add a line defining the patch.
+    if len(patchname) > 0:
+        header += ", patch=fixed'" + patchname + "'\n\n"
+        header += "# the next line defines the patch\n"
+        header += ',, ' + ra2bbshms(ra_central) + ', ' + decl2bbsdms(decl_central) + ', ' + str(totalFlux)
+    header += "\n\n# the next lines define the sources\n"
+    skymodel.write(header)
+    for bbsrow in bbsrows:
+        skymodel.write(bbsrow + '\n')
+    skymodel.close()
+    print "Sky model stored in source table:", bbsfile
 
 def plotSpectrum(x, y, p, f):
     import pylab
@@ -288,6 +508,7 @@ def plotSpectrum(x, y, p, f):
     pylab.legend(numpoints=1, loc='best')
     pylab.grid(True)
     pylab.savefig(f, dpi=600)
+    pylab.close()
     return f
 
 

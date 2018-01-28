@@ -1,7 +1,7 @@
 DECLARE icatid INT;
 DECLARE i_freq_eff DOUBLE;
 DECLARE iband INT;
-SET icatid = 4;
+SET icatid = 7;
 
 INSERT INTO catalogs
   (catid
@@ -10,46 +10,43 @@ INSERT INTO catalogs
   ) 
 VALUES 
   (icatid
-  ,'VLSS'
-  ,'The VLA Low-frequency Sky Survey at 73.8MHz, The VLSS Catalog, Version 2007-06-26'
+  ,'TGSS'
+  ,'The Alternative Data Release of the TGSS 150MHz, The TGSS Catalog, Version 2016-03-16'
   )
 ;
 
-SET i_freq_eff = 73800000;
+SET i_freq_eff = 147500000.0; 
 /*SET iband = getBand(i_freq_eff, 2000000);*/
 SET iband = getBand(i_freq_eff);
 
 CREATE TABLE aux_catalogedsources
-  (aviz_RAJ2000 DOUBLE
-  ,aviz_DEJ2000 DOUBLE
-  ,aorig_catsrcid INT
-  ,aname VARCHAR(12)
-  ,aRAJ2000 VARCHAR(11)
+  (aorig_catsrcid INT 
+  ,aname VARCHAR(25)
+  ,aRAJ2000 DOUBLE
   ,ae_RAJ2000 DOUBLE
-  ,aDEJ2000 VARCHAR(11)
+  ,aDEJ2000 DOUBLE
   ,ae_DEJ2000 DOUBLE
   ,aSi DOUBLE
   ,ae_Si DOUBLE
-  ,al_MajAx CHAR(1)
+  ,aSp DOUBLE
+  ,ae_Sp DOUBLE
   ,aMajAx DOUBLE
   ,ae_MajAx DOUBLE
-  ,al_MinAx CHAR(1)
   ,aMinAx DOUBLE
   ,ae_MinAx DOUBLE
   ,aPA DOUBLE
   ,ae_PA DOUBLE
-  ,aField VARCHAR(8)
-  ,aXpos INT
-  ,aYpos INT
-  ,aSPECFIND VARCHAR(8)
+  ,aRMSnoise DOUBLE
+  ,aSourceCode VARCHAR(1)
+  ,aField VARCHAR(6)
   )
 ;
 
-COPY 68311 RECORDS
+COPY 623604 OFFSET 4 RECORDS
 INTO aux_catalogedsources
 FROM
 /* Set absolute path to csv file */
-'/path/to/vlss.csv'
+'/path/to/tgss.csv'
 USING DELIMITERS ';', '\n'
 NULL AS ''
 ;
@@ -77,30 +74,34 @@ INSERT INTO catalogedsources
   ,minor_err
   ,i_int_avg
   ,i_int_avg_err
+  ,i_peak_avg
+  ,i_peak_avg_err
   ,frame
   )
   SELECT aorig_catsrcid
         ,TRIM(aname)
         ,icatid
         ,iband
-        ,aviz_RAJ2000
-        ,aviz_DEJ2000
-        ,CAST(FLOOR(aviz_DEJ2000) AS INTEGER)
-        ,15 * ae_RAJ2000 * COS(RADIANS(aviz_DEJ2000))
+        ,aRAJ2000
+        ,aDEJ2000
+        ,CAST(FLOOR(aDEJ2000) AS INTEGER)
+        ,15 * ae_RAJ2000 * COS(RADIANS(aDEJ2000))
         ,ae_DEJ2000 
         ,i_freq_eff
-        ,COS(RADIANS(aviz_DEJ2000)) * COS(RADIANS(aviz_RAJ2000))
-        ,COS(RADIANS(aviz_DEJ2000)) * SIN(RADIANS(aviz_RAJ2000))
-        ,SIN(RADIANS(aviz_DEJ2000))
+        ,COS(RADIANS(aDEJ2000)) * COS(RADIANS(aRAJ2000))
+        ,COS(RADIANS(aDEJ2000)) * SIN(RADIANS(aRAJ2000))
+        ,SIN(RADIANS(aDEJ2000))
         ,aPA
         ,ae_PA
         ,aMajAx
         ,ae_MajAx
         ,aMinAx
         ,ae_MinAx
-        ,aSi
-        ,ae_Si
-        ,aSPECFIND
+        ,aSi / 1000
+        ,ae_Si / 1000
+        ,aSp / 1000
+        ,ae_Sp / 1000
+        ,aField
     FROM aux_catalogedsources
   ;
 
