@@ -1,0 +1,3 @@
+numpy==1.14.0
+pymonetdb==1.1.1
+six==1.11.0
