@@ -25,10 +25,15 @@ GSM database.
 The python wrapper script ``gsm.py`` can be used to generate a catalog file 
 in ``makesourcedb`` format and can be run as:
 
-``python gsm.py [-p patchname] basecat outfile RA DEC radius [vlssFluxCutoff [assocTheta]]``
+``python gsm.py [-d dbconfig] [-c config] [-v version] [-h help]``
 
-Note that since the last version we introduced the ``basecat`` argument. This allows
-you to set either VLSS or TGSS as the base catalogue for which counterparts will
+The database configuration file and the gsm-parameters config file need to be copied
+from the ``template_*.cfg`` files on ``gsm/config``. Default ``gsm.py`` will
+look for the file in the working diectory.
+
+Note that since the last version we introduced the ``basecat`` argument. This 
+can be set in the gsm-parameters config file to 
+either VLSS or TGSS as the base catalogue for which counterparts will
 be searched in the other catalogues.
 
 Documentation
