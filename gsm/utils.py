@@ -14,8 +14,11 @@ from gsm.db.qf import queryfile
 
 def expected_fluxes_in_fov(conn, basecat, ra_central, decl_central, fov_radius,
                            assoc_theta, bbsfile, flux_cutoff, patchname,
-                           storespectraplots=False, deruiter_radius=3.717):
-    """
+                           storespectraplots, deruiter_radius=3.717):
+    """Function to prepare the query input parameters for the
+    cross-match query.
+    If the central ra, dec with the fov_radius cross the 0/360 meridian,
+    the query is slightly reformatted.
     """
 
     DERUITER_R = deruiter_radius
@@ -40,15 +43,14 @@ def expected_fluxes_in_fov(conn, basecat, ra_central, decl_central, fov_radius,
         ra_min2 = np.float(0.0)
         ra_max2 = np.float(ra_central + alpha(decl_central, fov_radius) - 360)
         q = "q_across_ra0"
-    elif ra_central - alpha(decl_central, fov_radius) < 0 and ra_central + alpha(decl_central, fov_radius) > 360:
-        raise BaseException("ra = %s > 360 degrees, not implemented yet" % str(ra_central + alpha(decl_central, fov_radius)))
+    elif ra_central - alpha(decl_central, fov_radius) < 0 and \
+         ra_central + alpha(decl_central, fov_radius) > 360:
+        raise BaseException("ra = %s > 360 degrees, not implemented yet" \
+            % str(ra_central + alpha(decl_central, fov_radius)))
     else:
         ra_min = np.float64(ra_central - alpha(decl_central, fov_radius))
         ra_max = np.float64(ra_central + alpha(decl_central, fov_radius))
         q = "q0"
-
-    #if flux_cutoff is None:
-    #    flux_cutoff = 0.
 
     if basecat == "TGSS":
         if q == "q0":
@@ -114,7 +116,7 @@ def expected_fluxes_in_fov(conn, basecat, ra_central, decl_central, fov_radius,
             query = qu % (params)
         expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots, patchname='')
 
-def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots=False, patchname=''):
+def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots, patchname=''):
     # TODO: We should include TGSS in the search as well!
     """Search for VLSS, WENSS and NVSS sources that are in the given FoV.
     The FoV is set by its central position (ra_central, decl_central)
@@ -254,7 +256,7 @@ def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots=False, p
                 # p has form : p(x) = p[0] + p[1]*x
                 p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 1))
                 #print p
-                if storespectraplots:
+                if storespectraplots == True:
                     spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "vlss_%s.eps" % vlss_name[i])
                     spectrumfiles.append(spectrumfile)
                 # Default reference frequency is reported, so we leave it empty here;
@@ -268,7 +270,7 @@ def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots=False, p
                 # p has form : p(x) = p[0] + p[1]*x + p[2]*x**2
                 p = np.poly1d(np.polyfit(np.array(lognu), np.array(logflux), 2))
                 #print p
-                if storespectraplots:
+                if storespectraplots == True:
                     spectrumfile = plotSpectrum(np.array(lognu), np.array(logflux), p, "vlss_%s.eps" % vlss_name[i])
                     spectrumfiles.append(spectrumfile)
                 # Default reference frequency is reported, so we leave it empty here
@@ -282,7 +284,7 @@ def expected_fluxes_in_fov_vlss(conn, query, bbsfile, storespectraplots=False, p
             #print bbsrow
             bbsrows.append (bbsrow)
 
-        if storespectraplots:
+        if storespectraplots == True:
             print "Spectra available in:", spectrumfiles
 
     # Write the format line.

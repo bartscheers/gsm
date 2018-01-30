@@ -1,1 +1,1 @@
-include gsm/db/*
+include gsm/db/sql/*
