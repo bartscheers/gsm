@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='gsm'
-     ,version='2.1.4'
+     ,version='2.1.5'
      ,description="LOFAR's Global Sky Model (GSM)"
      ,url='https://github.com/bartscheers/gsm'
      ,author='Bart Scheers'

@@ -15,13 +15,12 @@ parser.add_argument('--dbconf', '-d', help='config file of GSM database setting'
                                            ' (default ./dbconfig.cfg)')
 parser.add_argument('--conf', "-c", help='config file of input params'\
                                          ' (default ./config.cfg)')
-parser.add_argument('--version', "-v", action='version', version='%(prog)s 2.1.4')
+parser.add_argument('--version', "-v", action='version', version='%(prog)s 2.1.5')
 
 args = parser.parse_args()
 
 dbconf = args.dbconf
 conf = args.conf
-
 if dbconf is None:
     dbconf = './dbconfig.cfg'
 if conf is None:
@@ -72,6 +71,7 @@ try:
                              ,storespectraplots
                              ,cfg.getfloat("gsmparams", "deRuiter_radius")
                              )
+    conn.close()
 except DBError, e:
     raise
 
