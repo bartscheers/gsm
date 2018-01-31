@@ -15,7 +15,7 @@ parser.add_argument('--dbconf', '-d', help='config file of GSM database setting'
                                            ' (default ./dbconfig.cfg)')
 parser.add_argument('--conf', "-c", help='config file of input params'\
                                          ' (default ./config.cfg)')
-parser.add_argument('--version', "-v", action='version', version='%(prog)s 2.1.5')
+parser.add_argument('--version', "-v", action='version', version='%(prog)s 2.1.7')
 
 args = parser.parse_args()
 
