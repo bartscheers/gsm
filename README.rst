@@ -33,15 +33,19 @@ in the working directory.
 Run ``gsm.py``
 --------------
 
-The python wrapper script ``gsm.py`` can be used to generate a catalog file 
-in ``makesourcedb`` format and can be run as:
-
-``python gsm.py [-d dbconfig] [-c config] [-v version] [-h help]``
-
 The gsm-parameters configuration file needs to be copied
-from ``template_conf.cfg`` somewhere to ``config.cfg``. Default ``gsm.py`` will
+from ``template_conf.cfg`` somewhere to ``config.cfg``. 
+Here you specify the parameters like central ra and dec, 
+fov radius, etc.
+Default ``gsm.py`` will
 look for the file in the working diectory. Otherwise
 it should be specified by the option ``--conf relpath/to/config.cfg``.
+
+The python wrapper script ``gsm.py`` can be used to generate a 
+Global Sky Model file 
+in ``makesourcedb`` format and can be run as:
+
+``python gsm.py [-h] [-d dbconfig.cfg] [-c config.cfg] [--version]``
 
 Note that since the last version we introduced the ``basecat`` argument. This 
 can be set in the gsm-parameters config file to 

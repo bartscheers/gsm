@@ -10,11 +10,11 @@ from pymonetdb.exceptions import Error as DBError
 from gsm import utils as gu
 from gsm.exceptions import GSMException
 
-parser = argparse.ArgumentParser(prog='GSM')
+parser = argparse.ArgumentParser(prog='gsm')
 parser.add_argument('--dbconf', '-d', help='config file of GSM database setting'\
-                                           '(default ./dbconfig.cfg)')
+                                           ' (default ./dbconfig.cfg)')
 parser.add_argument('--conf', "-c", help='config file of input params'\
-                                         '(default ./config.cfg)')
+                                         ' (default ./config.cfg)')
 parser.add_argument('--version', "-v", action='version', version='%(prog)s 2.1.4')
 
 args = parser.parse_args()
